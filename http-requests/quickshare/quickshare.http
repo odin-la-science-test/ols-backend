@@ -1,0 +1,85 @@
+### ============================================================================
+### QUICKSHARE - Test Requests
+### ============================================================================
+
+@host = http://localhost:8080
+@auth = {{host}}/api/auth
+@api = {{host}}/api/quickshare
+
+### ─── Login ───
+# @name login
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@ols.com",
+  "password": "admin123"
+}
+
+> {% client.global.set("token", response.body.accessToken); %}
+
+### ─── Créer un partage TEXTE ───
+# @name createText
+POST {{api}}/text
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Mon snippet",
+  "textContent": "Voici le contenu que je veux partager facilement entre mes appareils. C'est un texte assez long pour tester."
+}
+
+### ─── Créer un partage TEXTE avec expiration ───
+# @name createTextWithExpiry
+POST {{api}}/text
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Note temporaire",
+  "textContent": "Ce texte expire dans 24h",
+  "expiresAt": "2026-03-16T15:00:00",
+  "maxDownloads": 5
+}
+
+### ─── Upload un FICHIER ───
+# @name uploadFile
+POST {{api}}/file
+Content-Type: multipart/form-data; boundary=boundary
+Authorization: Bearer {{token}}
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+Hello from QuickShare test file!
+--boundary
+Content-Disposition: form-data; name="title"
+
+Mon fichier de test
+--boundary--
+
+### ─── Lister mes partages ───
+# @name myShares
+GET {{api}}
+Authorization: Bearer {{token}}
+
+### ─── Consulter un partage par code ───
+# @name getByCode
+GET {{api}}/d/REPLACE_WITH_CODE
+Authorization: Bearer {{token}}
+
+### ─── Télécharger un fichier par code ───
+# @name downloadFile
+GET {{api}}/d/REPLACE_WITH_CODE/download
+Authorization: Bearer {{token}}
+
+### ─── Détail d'un partage par ID ───
+# @name getById
+GET {{api}}/1
+Authorization: Bearer {{token}}
+
+### ─── Supprimer un partage ───
+# @name deleteShare
+DELETE {{api}}/1
+Authorization: Bearer {{token}}
