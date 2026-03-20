@@ -10,11 +10,11 @@ COPY pom.xml .
 # Download dependencies (cached layer)
 RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
 
-# Copy source code
-COPY src ./src
+# Copy only main source code (not tests)
+COPY src/main ./src/main
 
-# Build the application
-RUN ./mvnw clean package -DskipTests
+# Build the application (skip tests)
+RUN ./mvnw clean package -DskipTests -Dmaven.test.skip=true
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-jammy
