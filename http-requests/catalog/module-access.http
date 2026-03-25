@@ -1,0 +1,143 @@
+### Configuration (Dev)
+@host = http://localhost:8080
+@auth = {{host}}/api/auth
+@api = {{host}}/api/modules
+
+### ===========================================================================
+### LOGIN UTILISATEURS
+### ===========================================================================
+
+### Login Admin (accès à tout)
+# @name loginAdmin
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "1234"
+}
+
+### Login Pro (a acheté LIMS)
+# @name loginPro
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "pro@example.com",
+  "password": "1234"
+}
+
+### Login Student (a acheté Inventaire)
+# @name loginStudent
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "student@example.com",
+  "password": "1234"
+}
+
+### Login Guest (aucun achat)
+# @name loginGuest
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "guest@example.com",
+  "password": "1234"
+}
+
+### ===========================================================================
+### TEST ACCÈS ADMIN (tout accessible)
+### ===========================================================================
+
+### Admin - Modules gratuits (MUNIN_ATLAS)
+GET {{api}}/type/MUNIN_ATLAS
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### Admin - Modules payants (HUGIN_LAB)
+GET {{api}}/type/HUGIN_LAB
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### Admin - LIMS (payant)
+GET {{api}}/HUGIN_LIMS
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### ===========================================================================
+### TEST ACCÈS PRO (LIMS acheté)
+### ===========================================================================
+
+### Pro - Module gratuit (OK)
+GET {{api}}/MUNIN_BACTERIO
+Authorization: Bearer {{loginPro.response.body.accessToken}}
+
+### Pro - LIMS (acheté - OK)
+GET {{api}}/HUGIN_LIMS
+Authorization: Bearer {{loginPro.response.body.accessToken}}
+
+### Pro - Inventaire (pas acheté - locked?)
+GET {{api}}/HUGIN_INVENTORY
+Authorization: Bearer {{loginPro.response.body.accessToken}}
+
+### ===========================================================================
+### TEST ACCÈS STUDENT (Inventaire acheté)
+### ===========================================================================
+
+### Student - Module gratuit (OK)
+GET {{api}}/MUNIN_MYCO
+Authorization: Bearer {{loginStudent.response.body.accessToken}}
+
+### Student - Inventaire (acheté - OK)
+GET {{api}}/HUGIN_INVENTORY
+Authorization: Bearer {{loginStudent.response.body.accessToken}}
+
+### Student - LIMS (pas acheté - locked?)
+GET {{api}}/HUGIN_LIMS
+Authorization: Bearer {{loginStudent.response.body.accessToken}}
+
+### ===========================================================================
+### TEST ACCÈS GUEST (aucun achat)
+### ===========================================================================
+
+### Guest - Module gratuit (OK)
+GET {{api}}/MUNIN_VIRO
+Authorization: Bearer {{loginGuest.response.body.accessToken}}
+
+### Guest - LIMS (pas acheté - locked?)
+GET {{api}}/HUGIN_LIMS
+Authorization: Bearer {{loginGuest.response.body.accessToken}}
+
+### Guest - Inventaire (pas acheté - locked?)
+GET {{api}}/HUGIN_INVENTORY
+Authorization: Bearer {{loginGuest.response.body.accessToken}}
+
+### ===========================================================================
+### TEST REFRESH TOKEN
+### ===========================================================================
+
+### Refresh token Admin
+POST {{auth}}/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{loginAdmin.response.body.refreshToken}}"
+}
+
+### Refresh token Pro
+POST {{auth}}/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{loginPro.response.body.refreshToken}}"
+}
+
+### ===========================================================================
+### TEST SANS AUTH (401)
+### ===========================================================================
+
+### Sans token - doit retourner 401
+GET {{api}}/MUNIN_BACTERIO
+
+### Token invalide - doit retourner 401
+GET {{api}}/MUNIN_BACTERIO
+Authorization: Bearer invalid.token.here

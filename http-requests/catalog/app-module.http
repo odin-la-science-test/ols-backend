@@ -1,0 +1,52 @@
+### Configuration (Dev)
+@host = http://localhost:8080
+@auth = {{host}}/api/auth
+@api = {{host}}/api/modules
+
+### ===========================================================================
+### Utilisateurs pré-créés dans data.sql (mot de passe: 1234)
+### ===========================================================================
+
+### 0) Login Admin - Capture du token
+# @name loginAdmin
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "1234" 
+}
+
+### ===========================================================================
+### CATALOGUE : Gestion des Modules (Munin & Hugin)
+### ===========================================================================
+
+### 1. Récupérer tout le catalogue
+GET {{api}}
+Accept: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### 2. Récupérer uniquement les cartes de l'Atlas (Munin)
+GET {{api}}/type/MUNIN_ATLAS
+Accept: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### 3. Récupérer uniquement les outils du Labo (Hugin)
+GET {{api}}/type/HUGIN_LAB
+Accept: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### 4. Récupérer un module précis par sa clé (ex: LIMS)
+GET {{api}}/HUGIN_LIMS
+Accept: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### 5. Récupérer un module par sa clé (ex: Bactériologie)
+GET {{api}}/MUNIN_BACTERIO
+Accept: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### 6. Test d'erreur : Module inexistant (Doit retourner 404)
+GET {{api}}/MODULE_INEXISTANT_XYZ
+Accept: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}

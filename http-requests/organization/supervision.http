@@ -1,0 +1,29 @@
+### Variables
+@baseUrl = http://localhost:8080/api/organizations/1/supervisions
+@token = Bearer {{$dotenv JWT_TOKEN}}
+
+### Creer une relation de supervision
+POST {{baseUrl}}
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "supervisorId": 2,
+  "superviseeId": 3
+}
+
+### Lister les supervisions de l'organisation
+GET {{baseUrl}}
+Authorization: {{token}}
+
+### Mes supervises
+GET {{baseUrl}}/my-supervisees
+Authorization: {{token}}
+
+### Mes superviseurs
+GET {{baseUrl}}/my-supervisors
+Authorization: {{token}}
+
+### Supprimer une supervision
+DELETE {{baseUrl}}/1
+Authorization: {{token}}

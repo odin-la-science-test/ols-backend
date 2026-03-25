@@ -1,0 +1,76 @@
+### ═══════════════════════════════════════════════════════════════════════
+### NOTES - Cahier de laboratoire
+### ═══════════════════════════════════════════════════════════════════════
+
+### Configuration (Dev)
+@host = http://localhost:8080
+@auth = {{host}}/api/auth
+@api = {{host}}/api/notes
+
+### ─── Login ───
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "1234"
+}
+
+> {% client.global.set("token", response.body.accessToken); %}
+
+### ─── Créer une note ───
+POST {{api}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Protocole PCR",
+  "content": "1. Extraction ADN\n2. Amplification\n3. Électrophorèse\n4. Analyse des résultats",
+  "color": "blue",
+  "pinned": false,
+  "tags": ["protocole", "pcr", "biologie-moleculaire"]
+}
+
+### ─── Créer une seconde note (épinglée) ───
+POST {{api}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Rappels sécurité labo",
+  "content": "- Port du EPI obligatoire\n- Hotte aspirante pour les solvants\n- Décontamination des surfaces",
+  "color": "red",
+  "pinned": true,
+  "tags": ["sécurité", "important"]
+}
+
+### ─── Lister mes notes ───
+GET {{api}}
+Authorization: Bearer {{token}}
+
+### ─── Détail d'une note (ID=1) ───
+GET {{api}}/1
+Authorization: Bearer {{token}}
+
+### ─── Mettre à jour une note ───
+PUT {{api}}/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Protocole PCR v2",
+  "content": "1. Extraction ADN (kit Qiagen)\n2. Amplification (35 cycles)\n3. Électrophorèse (gel 1.5%)\n4. Analyse UV",
+  "tags": ["protocole", "pcr", "biologie-moleculaire", "v2"]
+}
+
+### ─── Toggle pin ───
+PATCH {{api}}/1/pin
+Authorization: Bearer {{token}}
+
+### ─── Rechercher ───
+GET {{api}}/search?q=protocole
+Authorization: Bearer {{token}}
+
+### ─── Supprimer une note ───
+DELETE {{api}}/1
+Authorization: Bearer {{token}}

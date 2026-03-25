@@ -1,0 +1,93 @@
+### Configuration (Dev)
+@host = http://localhost:8080
+@auth = {{host}}/api/auth
+
+@api = {{host}}/api/bacteria
+
+### 0) Login - Capture du token
+# @name loginRequest 
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "1234" 
+}
+
+### ===========================================================================
+### BACTERIOLOGIE : Endpoints pour les bactéries
+### ===========================================================================
+
+### 1. Récupérer tout le catalogue de bactéries
+GET {{api}}
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.accessToken}}
+
+### 2. Récupérer une bactérie par ID (ex: E. Coli)
+GET {{api}}/1
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.accessToken}}
+
+### 3. Récupérer une bactérie par ID inexistante (doit retourner 404)
+GET {{api}}/99999
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.accessToken}}
+
+### 4. Recherche par espèce (query param)
+GET {{api}}/search?query=aureus
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+### 5. Recherche sans paramètre (doit retourner 400 Bad Request)
+GET {{api}}/search
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+### 6. Identifier via code API (ex: 5144572 -> E. Coli)
+GET {{api}}/identify/api/5144572
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+### 7. Identifier via code API inconnu (doit retourner 404)
+GET {{api}}/identify/api/0000000
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+### 8. Identifier par profil biochimique (E. coli : Gram- / Catalase+ / Oxydase-)
+# Doit retourner une liste triée avec un confidenceScore
+POST {{api}}/identify
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+{
+  "gram": "NEGATIVE",
+  "morpho": "BACILLI",
+  "catalase": true,
+  "oxydase": false,
+  "lactose": true,
+  "indole": true
+}
+
+### 9. Identifier par profil biochimique (Staphylococcus : Gram+ / Catalase+ / Coagulase+)
+POST {{api}}/identify
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+{
+  "gram": "POSITIVE",
+  "morpho": "COCCI",
+  "catalase": true,
+  "oxydase": false,
+  "coagulase": true
+}
+
+### 10. Test avec critères vides (Doit retourner liste vide [])
+POST {{api}}/identify
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+{
+}

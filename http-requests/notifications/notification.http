@@ -1,0 +1,32 @@
+### ═══════════════════════════════════════════════════════════════
+### NOTIFICATIONS - API Tests
+### ═══════════════════════════════════════════════════════════════
+
+### Variables
+@host = http://localhost:8080/api
+@token = {{$dotenv AUTH_TOKEN}}
+
+### ─── Lister mes notifications ───
+GET {{host}}/notifications
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ─── Compteur non lues ───
+GET {{host}}/notifications/unread-count
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ─── Marquer une notification comme lue ───
+PATCH {{host}}/notifications/1/read
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ─── Marquer toutes comme lues ───
+PATCH {{host}}/notifications/read-all
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ─── Supprimer une notification ───
+DELETE {{host}}/notifications/1
+Authorization: Bearer {{token}}
+Content-Type: application/json

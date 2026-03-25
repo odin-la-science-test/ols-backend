@@ -1,0 +1,37 @@
+### Users - Endpoints tests
+@host = http://localhost:8080
+@auth = {{host}}/api/auth
+@users = {{host}}/api/users
+
+### ===========================================================================
+### Utilisateurs pré-créés dans data.sql (mot de passe: 1234)
+### ===========================================================================
+
+### 0) Login Admin - Capture du token
+# @name loginAdmin
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "1234" 
+}
+
+### 1) Récupérer tous les utilisateurs
+GET {{users}}
+Accept: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### 2) Récupérer un utilisateur par id
+GET {{users}}/1
+Accept: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### 3) Récupérer l'utilisateur courant (/me) — nécessite Authorization
+GET {{users}}/me
+Accept: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### 4) Tester /me sans auth (doit renvoyer 401)
+GET {{users}}/me
+Accept: application/json
