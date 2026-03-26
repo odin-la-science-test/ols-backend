@@ -1,0 +1,17 @@
+target/
+.mvn/
+mvnw
+mvnw.cmd
+.git/
+.gitignore
+.idea/
+.vscode/
+*.log
+.DS_Store
+Thumbs.db
+http-requests/
+openapi.json
+CLAUDE.md
+CONVENTIONS.md
+# Maven wrapper jar (properties file is fine)
+.mvn/wrapper/maven-wrapper.jar
