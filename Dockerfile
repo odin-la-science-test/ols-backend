@@ -15,4 +15,4 @@ COPY --from=build /app/target/OLS-backend-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 7860
 
 # Démarrage de l'application sur le port 7860
-ENTRYPOINT ["java", "-Xmx384m", "-jar", "app.jar", "--server.port=7860"]
+ENTRYPOINT ["java", "-Xmx384m", "-jar", "app.jar", "--server.port=7860", "--spring.profiles.active=prod"]
