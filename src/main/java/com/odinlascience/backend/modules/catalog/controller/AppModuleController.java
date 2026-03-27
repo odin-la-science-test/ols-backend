@@ -3,11 +3,13 @@ package com.odinlascience.backend.modules.catalog.controller;
 import com.odinlascience.backend.modules.catalog.dto.AppModuleDTO;
 import com.odinlascience.backend.modules.catalog.enums.ModuleType;
 import com.odinlascience.backend.modules.catalog.service.AppModuleService;
+import com.odinlascience.backend.modules.catalog.service.ModuleAccessService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +21,7 @@ import java.util.List;
 public class AppModuleController {
 
     private final AppModuleService service;
+    private final ModuleAccessService accessService;
 
     @GetMapping
     @Operation(summary = "Récupérer tous les modules", description = "Retourne la liste de tous les modules du catalogue sous forme de DTO.")
@@ -30,6 +33,12 @@ public class AppModuleController {
     @Operation(summary = "Récupérer les modules par type (MUNIN_ATLAS ou HUGIN_LAB)", description = "Filtre et retourne les modules correspondant au type fourni en path variable.")
     public ResponseEntity<List<AppModuleDTO>> getModulesByType(@PathVariable ModuleType type) {
         return ResponseEntity.ok(service.getModulesByType(type));
+    }
+
+    @GetMapping("/accessible")
+    @Operation(summary = "Récupérer les clés des modules accessibles", description = "Retourne la liste des clés de modules auxquels l'utilisateur authentifié a accès.")
+    public ResponseEntity<List<String>> getAccessibleModules(Authentication auth) {
+        return ResponseEntity.ok(accessService.getAccessibleModuleKeys(auth.getName()));
     }
 
     @GetMapping("/{key}")

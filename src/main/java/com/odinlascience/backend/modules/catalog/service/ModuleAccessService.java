@@ -3,6 +3,7 @@ package com.odinlascience.backend.modules.catalog.service;
 import com.odinlascience.backend.modules.catalog.model.AppModule;
 import com.odinlascience.backend.modules.common.event.ModuleAccessGrantedEvent;
 import com.odinlascience.backend.modules.catalog.model.UserModuleAccess;
+import com.odinlascience.backend.modules.catalog.repository.AppModuleRepository;
 import com.odinlascience.backend.modules.catalog.repository.UserModuleAccessRepository;
 import com.odinlascience.backend.modules.common.spi.UserQuerySPI;
 import com.odinlascience.backend.user.enums.RoleType;
@@ -25,6 +26,7 @@ public class ModuleAccessService {
 
     private final UserQuerySPI userQuerySPI;
     private final UserModuleAccessRepository accessRepository;
+    private final AppModuleRepository appModuleRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public boolean isModuleLocked(AppModule module) {
@@ -114,5 +116,19 @@ public class ModuleAccessService {
         return userQuerySPI.getCurrentUser()
             .map(user -> accessRepository.findByUserIdAndHasAccessTrue(user.getId()))
             .orElse(List.of());
+    }
+
+    /**
+     * Retourne les cles des modules auxquels l'utilisateur a acces.
+     * Pour l'instant, retourne tous les modules actifs du catalogue
+     * (l'infrastructure est en place, la logique de permission sera affinee plus tard).
+     */
+    @Transactional(readOnly = true)
+    public List<String> getAccessibleModuleKeys(String userEmail) {
+        log.debug("Recuperation des modules accessibles pour l'utilisateur: {}", userEmail);
+        return appModuleRepository.findAll().stream()
+                .filter(m -> Boolean.TRUE.equals(m.getActive()))
+                .map(AppModule::getModuleKey)
+                .toList();
     }
 }

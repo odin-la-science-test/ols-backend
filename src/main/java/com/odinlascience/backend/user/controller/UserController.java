@@ -1,6 +1,7 @@
 package com.odinlascience.backend.user.controller;
 
 import com.odinlascience.backend.exception.dto.ErrorResponseDTO;
+import com.odinlascience.backend.user.dto.ChangePasswordRequest;
 import com.odinlascience.backend.user.dto.UpdateAvatarRequest;
 import com.odinlascience.backend.user.dto.UpdateUserPreferencesRequest;
 import com.odinlascience.backend.user.dto.UserDTO;
@@ -66,6 +67,13 @@ public class UserController {
                         .timestamp(LocalDateTime.now())
                         .build()
                 ));
+    }
+
+    @PutMapping("/me/password")
+    @Operation(summary = "Changer le mot de passe", description = "Change le mot de passe de l'utilisateur authentifie (comptes locaux uniquement)")
+    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        service.changePassword(request);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/me/avatar")

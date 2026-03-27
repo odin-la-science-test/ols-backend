@@ -16,4 +16,5 @@ public class UserDTO {
     private RoleType role;
     private String avatarId;
     private AuthProvider authProvider;
+    private boolean emailVerified;
 }

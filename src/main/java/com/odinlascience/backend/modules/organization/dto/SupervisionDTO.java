@@ -14,7 +14,9 @@ public class SupervisionDTO {
     private Long organizationId;
     private Long supervisorId;
     private String supervisorName;
+    private String supervisorAvatarId;
     private Long superviseeId;
     private String superviseeName;
+    private String superviseeAvatarId;
     private Instant createdAt;
 }

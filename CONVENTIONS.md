@@ -48,6 +48,8 @@ Monolithe modulaire : `com.odinlascience.backend.modules.{module}`
 | `organization` | Systeme | Organisations, membres, supervision |
 | `support` | Systeme | Tickets de support |
 | `ai` | Systeme | Correction de texte (LanguageTool) |
+| `annotations` | CRUD owned | Annotations personnelles sur entites |
+| `studycollections` | CRUD owned | Collections d'etude cross-modules |
 
 ### Couches par module (dans cet ordre)
 
@@ -177,6 +179,10 @@ Quand on modifie les packages hors-modules (auth, config, security, exception, u
 - Reponses d'erreur standardisees (jamais de stack trace cote client)
 - Ajouter un `@ExceptionHandler` pour chaque nouveau type d'exception custom
 
+### Scheduler
+
+`SchedulerRegistry` dans `config/` enregistre les taches planifiees. Endpoint admin `GET /api/admin/scheduler`. Les taches s'enregistrent via `registry.register()`.
+
 ### Auth
 
 - `Authentication auth` dans les controllers proteges
@@ -243,7 +249,12 @@ Modules qui utilisent le systeme d'identification par scoring. Heritent des abst
 
 Modules ou chaque entite appartient a un utilisateur. Ownership verifie a chaque operation.
 
+**Abstractions a etendre :**
+- `AbstractOwnedCrudService<Entity, DTO, CreateRequest, UpdateRequest>` — CRUD complet avec ownership
+- `AbstractOwnedCrudController<DTO, CreateRequest, UpdateRequest, Service>` — fournit automatiquement les endpoints
+
 **Entite :**
+- Implemente `OwnedEntity` (fournit `getOwner()`)
 - `@ManyToOne(fetch = FetchType.LAZY)` vers `User` (owner)
 - Champs temporels : `createdAt`, `updatedAt`
 - `@Builder`, `@Data`, `@Entity`, `@NoArgsConstructor`, `@AllArgsConstructor`
@@ -254,16 +265,18 @@ Modules ou chaque entite appartient a un utilisateur. Ownership verifie a chaque
 - `Update{Entity}Request` — modification (champs nullable pour partial update)
 
 **Service :**
-- `@Service`, `@RequiredArgsConstructor`, `@Slf4j`
-- Chaque methode recoit `String userEmail` (depuis `auth.getName()`)
-- Lookup user : `userRepository.findByEmail(userEmail)`
-- **Verification ownership** : comparer `entity.getOwner().getId()` avec l'user connecte
-- `@Transactional` pour les ecritures, `@Transactional(readOnly = true)` pour les lectures
+- `@Service`, `@Slf4j`, extends `AbstractOwnedCrudService`
+- Constructeur : `super(userHelper)` + injecter repo, mapper, etc.
+- Implementer les methodes abstraites : `toEntity`, `applyUpdate`, `toDTO`, `getEntityName`, `getRepository`, `findAllByOwner`, `searchByOwner`
+- Methodes custom (toggle favori, etc.) utilisent `findEntityOwnedBy()` du parent
 
 **Controller :**
-- `@RestController`, `@RequestMapping("/api/{module}")`
-- `@Tag(name = "...", description = "...")`
-- Endpoints standard :
+- `@RestController`, `@RequestMapping("/api/{module}")`, `@Tag`, extends `AbstractOwnedCrudController`
+- Constructeur : `super(service)`
+- Override les methodes heritees pour ajouter `@Operation` (Swagger) en appelant `super`
+- Ajouter les endpoints custom (toggle, etc.) directement
+
+**Endpoints fournis automatiquement :**
 
 | Methode | Path | Description |
 |---------|------|-------------|
@@ -274,11 +287,29 @@ Modules ou chaque entite appartient a un utilisateur. Ownership verifie a chaque
 | `DELETE` | `/{id}` | Supprimer (204) |
 | `GET` | `/search?query=` | Rechercher |
 
-Endpoints optionnels :
+Endpoints optionnels (a ajouter dans le controller concret) :
 | `PATCH` | `/{id}/favorite` | Toggle favori |
 | `PATCH` | `/{id}/pin` | Toggle epingle |
+| `PATCH` | `/{id}/restore` | Restaurer une entite soft-deleted (remet `deletedAt = null`). Disponible automatiquement pour les entites `SoftDeletable` |
 
 **Reference** : `modules/contacts/`
+
+---
+
+### Classes utilitaires communes (`modules/common/`)
+
+| Classe | Role |
+|--------|------|
+| `OwnedEntity` | Interface marqueur pour les entites avec owner |
+| `AuditableEntity` | `@MappedSuperclass` avec `createdAt`, `updatedAt`, `createdBy`, `updatedBy` (JPA Auditing). **Etendu par** Contact, Note, Annotation, StudyCollection |
+| `SoftDeletable` | Interface pour le soft delete (`getDeletedAt`, `setDeletedAt`, `isDeleted`). **Implemente par** Contact, Note. Le `delete()` dans `AbstractOwnedCrudService` fait un soft delete automatique pour les entites `SoftDeletable` |
+| `UserHelper` | Resolution d'utilisateur + verification d'ownership |
+| `AbstractOwnedCrudService` | Service abstrait CRUD owned (create, getMyItems, getById, update, delete, search) |
+| `AbstractOwnedCrudController` | Controller abstrait CRUD owned (endpoints REST standard) |
+| `AbstractIdentificationService` | Service abstrait pour l'identification par scoring |
+| `AbstractIdentificationController` | Controller abstrait pour les endpoints d'identification |
+
+**JPA Auditing** : `@EnableJpaAuditing` est configure dans `config/AuditingConfig.java`. Les entites qui etendent `AuditableEntity` ont `createdAt`, `updatedAt`, `createdBy`, `updatedBy` remplis automatiquement.
 
 ---
 
@@ -348,6 +379,8 @@ public void onShareCreated(ShareCreatedEvent event) { ... }
 ### Notifications temps reel (SSE)
 
 `NotificationService.send()` persiste la notification en BDD puis la pousse en temps reel via `SseEmitterService`. Le frontend se connecte a `GET /api/notifications/stream` (SSE) et invalide automatiquement le cache TanStack Query a chaque notification recue.
+
+`SseEmitterService` diffuse aussi des evenements `presence` (connect/disconnect). Le endpoint `GET /api/presence/connected` (`PresenceController`) retourne la liste des utilisateurs actuellement connectes.
 
 Ajouter un nouveau type de notification :
 1. Ajouter la valeur dans `NotificationType.java` (backend)

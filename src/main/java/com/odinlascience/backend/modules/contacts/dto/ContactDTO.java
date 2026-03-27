@@ -31,4 +31,10 @@ public class ContactDTO {
 
     /** Indique si l'email correspond à un utilisateur inscrit sur OLS */
     private Boolean isAppUser;
+
+    /** ID de l'utilisateur OLS correspondant (null si pas un app user) */
+    private Long appUserId;
+
+    /** Avatar de l'utilisateur OLS correspondant (null si pas un app user) */
+    private String appUserAvatarId;
 }

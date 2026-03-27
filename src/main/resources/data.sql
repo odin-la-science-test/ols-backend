@@ -3,21 +3,21 @@
 -- ============================================================================
 -- Mot de passe: 1234 (hashé avec BCrypt, préfixé {bcrypt} pour DelegatingPasswordEncoder)
 
-INSERT INTO app_users (email, password, first_name, last_name, role)
+INSERT INTO app_users (email, password, first_name, last_name, role, email_verified, auth_provider)
 VALUES ('admin@example.com', '{bcrypt}$2a$10$dYT5CMj6KyNNK9TwEC3ebeLtl8EgyQEEwleWKShyPhUHPqgIWzWEq', 'Admin', 'User',
-        'ADMIN');
+        'ADMIN', true, 'LOCAL');
 
-INSERT INTO app_users (email, password, first_name, last_name, role)
+INSERT INTO app_users (email, password, first_name, last_name, role, email_verified, auth_provider)
 VALUES ('student@example.com', '{bcrypt}$2a$10$dYT5CMj6KyNNK9TwEC3ebeLtl8EgyQEEwleWKShyPhUHPqgIWzWEq', 'Student',
-        'User', 'STUDENT');
+        'User', 'STUDENT', true, 'LOCAL');
 
-INSERT INTO app_users (email, password, first_name, last_name, role)
+INSERT INTO app_users (email, password, first_name, last_name, role, email_verified, auth_provider)
 VALUES ('pro@example.com', '{bcrypt}$2a$10$dYT5CMj6KyNNK9TwEC3ebeLtl8EgyQEEwleWKShyPhUHPqgIWzWEq', 'Pro', 'User',
-        'PROFESSIONAL');
+        'PROFESSIONAL', true, 'LOCAL');
 
-INSERT INTO app_users (email, password, first_name, last_name, role)
+INSERT INTO app_users (email, password, first_name, last_name, role, email_verified, auth_provider)
 VALUES ('guest@example.com', '{bcrypt}$2a$10$dYT5CMj6KyNNK9TwEC3ebeLtl8EgyQEEwleWKShyPhUHPqgIWzWEq', 'Guest', 'User',
-        'GUEST');
+        'GUEST', true, 'LOCAL');
 
 
 -- ============================================================================
@@ -109,6 +109,18 @@ VALUES ('Contacts', 'HUGIN_CONTACTS', 'contacts', 'contact-round',
 INSERT INTO modules (title, module_key, slug, icon, description, route_path, type, price, active)
 VALUES ('Organisations', 'HUGIN_ORGANIZATIONS', 'organization', 'building-2',
         'Gestion des organisations, membres et relations de supervision', '/lab/organization',
+        'HUGIN_LAB', 0.0, true);
+
+-- Module d'annotations
+INSERT INTO modules (title, module_key, slug, icon, description, route_path, type, price, active)
+VALUES ('Annotations', 'HUGIN_ANNOTATIONS', 'annotations', 'sticky-note',
+        'Annotations personnelles sur les entites (bacteries, champignons, contacts, etc.)', '/lab/annotations',
+        'HUGIN_LAB', 0.0, true);
+
+-- Module de collections d''etude
+INSERT INTO modules (title, module_key, slug, icon, description, route_path, type, price, active)
+VALUES ('Collections d''etude', 'HUGIN_STUDY_COLLECTIONS', 'study-collections', 'library-big',
+        'Playlists d''etude cross-modules pour organiser vos revisions', '/lab/study-collections',
         'HUGIN_LAB', 0.0, true);
 
 

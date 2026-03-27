@@ -1,21 +1,22 @@
 package com.odinlascience.backend.modules.contacts.service;
 
-import com.odinlascience.backend.exception.ResourceNotFoundException;
+import com.odinlascience.backend.modules.common.service.AbstractOwnedCrudService;
 import com.odinlascience.backend.modules.common.service.UserHelper;
+import com.odinlascience.backend.modules.common.spi.UserQuerySPI;
 import com.odinlascience.backend.modules.contacts.dto.ContactDTO;
 import com.odinlascience.backend.modules.contacts.dto.CreateContactRequest;
 import com.odinlascience.backend.modules.contacts.dto.UpdateContactRequest;
 import com.odinlascience.backend.modules.contacts.mapper.ContactMapper;
 import com.odinlascience.backend.modules.contacts.model.Contact;
 import com.odinlascience.backend.modules.contacts.repository.ContactRepository;
-import com.odinlascience.backend.modules.common.spi.UserQuerySPI;
 import com.odinlascience.backend.user.model.User;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -24,21 +25,26 @@ import java.util.List;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
-public class ContactService {
+public class ContactService
+        extends AbstractOwnedCrudService<Contact, ContactDTO, CreateContactRequest, UpdateContactRequest> {
 
     private final ContactRepository repository;
     private final ContactMapper mapper;
     private final UserQuerySPI userQuerySPI;
-    private final UserHelper userHelper;
 
-    // ─── Créer un contact ───
+    public ContactService(UserHelper userHelper, ContactRepository repository,
+                          ContactMapper mapper, UserQuerySPI userQuerySPI) {
+        super(userHelper);
+        this.repository = repository;
+        this.mapper = mapper;
+        this.userQuerySPI = userQuerySPI;
+    }
 
-    @Transactional
-    public ContactDTO create(CreateContactRequest request, String userEmail) {
-        User owner = userHelper.findByEmail(userEmail);
+    // ─── Méthodes abstraites implémentées ───
 
-        Contact contact = Contact.builder()
+    @Override
+    protected Contact toEntity(CreateContactRequest request, User owner) {
+        return Contact.builder()
                 .firstName(request.getFirstName() != null ? request.getFirstName() : "")
                 .lastName(request.getLastName() != null ? request.getLastName() : "")
                 .email(request.getEmail())
@@ -47,102 +53,71 @@ public class ContactService {
                 .jobTitle(request.getJobTitle())
                 .notes(request.getNotes())
                 .favorite(request.getFavorite() != null ? request.getFavorite() : false)
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
                 .owner(owner)
                 .build();
-
-        Contact saved = repository.save(contact);
-        log.info("Contact created: id={}, name='{} {}', owner={}", saved.getId(), saved.getFirstName(), saved.getLastName(), userEmail);
-        return mapper.toDTO(saved, isAppUser(saved.getEmail()));
     }
 
-    // ─── Lister mes contacts ───
-
-    @Transactional(readOnly = true)
-    public List<ContactDTO> getMyContacts(String userEmail) {
-        User owner = userHelper.findByEmail(userEmail);
-        List<Contact> contacts = repository.findByOwnerIdOrderByFavoriteDescLastNameAscFirstNameAsc(owner.getId());
-        return contacts.stream()
-                .map(c -> mapper.toDTO(c, isAppUser(c.getEmail())))
-                .toList();
+    @Override
+    protected void applyUpdate(Contact entity, UpdateContactRequest request) {
+        if (request.getFirstName() != null) entity.setFirstName(request.getFirstName());
+        if (request.getLastName() != null) entity.setLastName(request.getLastName());
+        if (request.getEmail() != null) entity.setEmail(request.getEmail());
+        if (request.getPhone() != null) entity.setPhone(request.getPhone());
+        if (request.getOrganization() != null) entity.setOrganization(request.getOrganization());
+        if (request.getJobTitle() != null) entity.setJobTitle(request.getJobTitle());
+        if (request.getNotes() != null) entity.setNotes(request.getNotes());
+        if (request.getFavorite() != null) entity.setFavorite(request.getFavorite());
     }
 
-    // ─── Détail d'un contact par ID ───
-
-    @Transactional(readOnly = true)
-    public ContactDTO getById(Long id, String userEmail) {
-        Contact contact = findContactOwnedBy(id, userEmail);
-        return mapper.toDTO(contact, isAppUser(contact.getEmail()));
+    @Override
+    protected ContactDTO toDTO(Contact entity) {
+        return mapper.toDTO(entity, findAppUser(entity.getEmail()));
     }
 
-    // ─── Mettre à jour un contact ───
-
-    @Transactional
-    public ContactDTO update(Long id, UpdateContactRequest request, String userEmail) {
-        Contact contact = findContactOwnedBy(id, userEmail);
-
-        if (request.getFirstName() != null) {
-            contact.setFirstName(request.getFirstName());
-        }
-        if (request.getLastName() != null) {
-            contact.setLastName(request.getLastName());
-        }
-        if (request.getEmail() != null) {
-            contact.setEmail(request.getEmail());
-        }
-        if (request.getPhone() != null) {
-            contact.setPhone(request.getPhone());
-        }
-        if (request.getOrganization() != null) {
-            contact.setOrganization(request.getOrganization());
-        }
-        if (request.getJobTitle() != null) {
-            contact.setJobTitle(request.getJobTitle());
-        }
-        if (request.getNotes() != null) {
-            contact.setNotes(request.getNotes());
-        }
-        if (request.getFavorite() != null) {
-            contact.setFavorite(request.getFavorite());
-        }
-
-        contact.setUpdatedAt(Instant.now());
-        Contact saved = repository.save(contact);
-        log.info("Contact updated: id={}, owner={}", saved.getId(), userEmail);
-        return mapper.toDTO(saved, isAppUser(saved.getEmail()));
+    @Override
+    public Class<ContactDTO> getDtoClass() {
+        return ContactDTO.class;
     }
 
-    // ─── Supprimer un contact ───
+    @Override
+    protected String getEntityName() {
+        return "Contact";
+    }
 
-    @Transactional
-    public void delete(Long id, String userEmail) {
-        Contact contact = findContactOwnedBy(id, userEmail);
-        repository.delete(contact);
-        log.info("Contact deleted: id={}, owner={}", id, userEmail);
+    @Override
+    protected JpaRepository<Contact, Long> getRepository() {
+        return repository;
+    }
+
+    @Override
+    protected List<Contact> findAllByOwner(User owner) {
+        return repository.findByOwnerIdAndDeletedAtIsNullOrderByFavoriteDescLastNameAscFirstNameAsc(owner.getId());
+    }
+
+    @Override
+    protected List<Contact> searchByOwner(String query, Long ownerId) {
+        return repository.searchByOwner(ownerId, query);
+    }
+
+    @Override
+    protected Page<Contact> findAllByOwnerPaged(User owner, Pageable pageable) {
+        return repository.findByOwnerIdAndDeletedAtIsNullOrderByFavoriteDescLastNameAscFirstNameAsc(owner.getId(), pageable);
+    }
+
+    @Override
+    protected Page<Contact> searchByOwnerPaged(String query, Long ownerId, Pageable pageable) {
+        return repository.searchByOwnerPaged(ownerId, query, pageable);
     }
 
     // ─── Toggle favori ───
 
     @Transactional
     public ContactDTO toggleFavorite(Long id, String userEmail) {
-        Contact contact = findContactOwnedBy(id, userEmail);
+        Contact contact = findEntityOwnedBy(id, userEmail);
         contact.setFavorite(!contact.getFavorite());
-        contact.setUpdatedAt(Instant.now());
         Contact saved = repository.save(contact);
         log.info("Contact favorite toggled: id={}, favorite={}, owner={}", saved.getId(), saved.getFavorite(), userEmail);
-        return mapper.toDTO(saved, isAppUser(saved.getEmail()));
-    }
-
-    // ─── Recherche ───
-
-    @Transactional(readOnly = true)
-    public List<ContactDTO> search(String query, String userEmail) {
-        User owner = userHelper.findByEmail(userEmail);
-        List<Contact> contacts = repository.searchByOwner(owner.getId(), query);
-        return contacts.stream()
-                .map(c -> mapper.toDTO(c, isAppUser(c.getEmail())))
-                .toList();
+        return mapper.toDTO(saved, findAppUser(saved.getEmail()));
     }
 
     // ─── Auto-ajout lors d'une interaction inter-modules ───
@@ -170,8 +145,6 @@ public class ContactService {
                 .lastName(targetUser != null && targetUser.getLastName() != null ? targetUser.getLastName() : "")
                 .email(targetEmail)
                 .favorite(false)
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
                 .owner(owner)
                 .build();
 
@@ -181,13 +154,8 @@ public class ContactService {
 
     // ─── Helpers ───
 
-    private boolean isAppUser(String email) {
-        return email != null && !email.isBlank() && userQuerySPI.existsByEmail(email);
-    }
-
-    private Contact findContactOwnedBy(Long contactId, String userEmail) {
-        Contact contact = repository.findById(contactId)
-                .orElseThrow(() -> new ResourceNotFoundException("Contact introuvable avec l'ID : " + contactId));
-        return userHelper.verifyOwnership(contact, userEmail, "Contact", contactId);
+    private User findAppUser(String email) {
+        if (email == null || email.isBlank()) return null;
+        return userQuerySPI.findByEmail(email).orElse(null);
     }
 }

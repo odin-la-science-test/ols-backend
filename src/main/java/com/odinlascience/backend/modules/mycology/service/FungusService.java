@@ -1,5 +1,6 @@
 package com.odinlascience.backend.modules.mycology.service;
 
+import com.odinlascience.backend.config.CacheConfig;
 import com.odinlascience.backend.modules.mycology.dto.FungusDTO;
 import com.odinlascience.backend.modules.mycology.mapper.FungusMapper;
 import com.odinlascience.backend.modules.mycology.model.Fungus;
@@ -7,7 +8,7 @@ import com.odinlascience.backend.modules.mycology.repository.FungusRepository;
 import com.odinlascience.backend.modules.common.model.IdentifiableMatch;
 import com.odinlascience.backend.modules.common.service.AbstractIdentificationService;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,7 +16,7 @@ import java.util.Optional;
 
 @Service
 public class FungusService extends AbstractIdentificationService<Fungus, FungusDTO, FungusRepository> {
-    
+
     private final FungusMapper mapper;
 
     public FungusService(FungusRepository repository, FungusMapper mapper) {
@@ -36,6 +37,24 @@ public class FungusService extends AbstractIdentificationService<Fungus, FungusD
     @Override
     protected String getEntityName() {
         return "Champignon";
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheConfig.FUNGI_CACHE, key = "'all'")
+    public List<FungusDTO> getAll() {
+        return super.getAll();
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheConfig.FUNGI_CACHE, key = "#id")
+    public FungusDTO getById(Long id) {
+        return super.getById(id);
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheConfig.FUNGI_SEARCH_CACHE, key = "#query")
+    public List<FungusDTO> searchBySpecies(String query) {
+        return super.searchBySpecies(query);
     }
 
     @Override

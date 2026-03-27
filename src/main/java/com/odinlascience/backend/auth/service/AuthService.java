@@ -37,6 +37,7 @@ public class AuthService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final SessionService sessionService;
+    private final EmailVerificationService emailVerificationService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -86,6 +87,8 @@ public class AuthService {
                 .build();
 
         User saved = userRepository.save(newUser);
+
+        emailVerificationService.sendVerificationEmail(saved);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(saved.getEmail());
         String refreshToken = jwtService.generateRefreshToken(userDetails);

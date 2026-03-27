@@ -15,6 +15,7 @@ public class MembershipMapper {
                 .userId(entity.getUser().getId())
                 .userEmail(entity.getUser().getEmail())
                 .userFullName(entity.getUser().getFullName())
+                .userAvatarId(entity.getUser().getAvatarId())
                 .role(entity.getRole())
                 .status(entity.getStatus())
                 .joinedAt(entity.getJoinedAt())

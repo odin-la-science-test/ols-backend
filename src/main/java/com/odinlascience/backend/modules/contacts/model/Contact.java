@@ -1,6 +1,8 @@
 package com.odinlascience.backend.modules.contacts.model;
 
+import com.odinlascience.backend.modules.common.model.AuditableEntity;
 import com.odinlascience.backend.modules.common.model.OwnedEntity;
+import com.odinlascience.backend.modules.common.model.SoftDeletable;
 import com.odinlascience.backend.user.model.User;
 
 import jakarta.persistence.*;
@@ -17,10 +19,11 @@ import java.time.Instant;
     @UniqueConstraint(columnNames = {"owner_id", "email"})
 })
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Contact implements OwnedEntity {
+public class Contact extends AuditableEntity implements OwnedEntity, SoftDeletable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -59,15 +62,9 @@ public class Contact implements OwnedEntity {
     @Column(nullable = false)
     private Boolean favorite = false;
 
-    /** Date de création */
-    @Builder.Default
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
-
-    /** Date de dernière modification */
-    @Builder.Default
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt = Instant.now();
+    /** Date de suppression logique (soft delete) */
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     /** Propriétaire du contact (le user qui a ce contact dans son carnet) */
     @ManyToOne(fetch = FetchType.LAZY)

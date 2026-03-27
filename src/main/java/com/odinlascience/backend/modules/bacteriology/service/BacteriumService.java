@@ -1,5 +1,6 @@
 package com.odinlascience.backend.modules.bacteriology.service;
 
+import com.odinlascience.backend.config.CacheConfig;
 import com.odinlascience.backend.modules.bacteriology.dto.BacteriumDTO;
 import com.odinlascience.backend.modules.bacteriology.mapper.BacteriumMapper;
 import com.odinlascience.backend.modules.bacteriology.model.Bacterium;
@@ -8,6 +9,7 @@ import com.odinlascience.backend.modules.common.model.IdentifiableMatch;
 import com.odinlascience.backend.modules.common.service.AbstractIdentificationService;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,7 +18,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 public class BacteriumService extends AbstractIdentificationService<Bacterium, BacteriumDTO, BacteriumRepository> {
-    
+
     private final BacteriumMapper mapper;
 
     public BacteriumService(BacteriumRepository repository, BacteriumMapper mapper) {
@@ -37,6 +39,24 @@ public class BacteriumService extends AbstractIdentificationService<Bacterium, B
     @Override
     protected String getEntityName() {
         return "Bactérie";
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheConfig.BACTERIA_CACHE, key = "'all'")
+    public List<BacteriumDTO> getAll() {
+        return super.getAll();
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheConfig.BACTERIA_CACHE, key = "#id")
+    public BacteriumDTO getById(Long id) {
+        return super.getById(id);
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheConfig.BACTERIA_SEARCH_CACHE, key = "#query")
+    public List<BacteriumDTO> searchBySpecies(String query) {
+        return super.searchBySpecies(query);
     }
 
     @Override

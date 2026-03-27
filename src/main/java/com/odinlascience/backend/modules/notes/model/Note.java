@@ -1,6 +1,8 @@
 package com.odinlascience.backend.modules.notes.model;
 
+import com.odinlascience.backend.modules.common.model.AuditableEntity;
 import com.odinlascience.backend.modules.common.model.OwnedEntity;
+import com.odinlascience.backend.modules.common.model.SoftDeletable;
 import com.odinlascience.backend.modules.notes.enums.NoteColor;
 import com.odinlascience.backend.user.model.User;
 
@@ -17,10 +19,11 @@ import java.time.Instant;
 @Entity
 @Table(name = "notes")
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Note implements OwnedEntity {
+public class Note extends AuditableEntity implements OwnedEntity, SoftDeletable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -49,15 +52,9 @@ public class Note implements OwnedEntity {
     @Column(length = 500)
     private String tags;
 
-    /** Date de création */
-    @Builder.Default
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
-
-    /** Date de dernière modification */
-    @Builder.Default
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt = Instant.now();
+    /** Date de suppression logique (soft delete) */
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     /** Propriétaire de la note */
     @ManyToOne(fetch = FetchType.LAZY)

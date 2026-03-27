@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -13,6 +14,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * Une connexion par utilisateur. Le client se reconnecte automatiquement
  * via {@code @microsoft/fetch-event-source} en cas de timeout ou d'erreur.
+ * <p>
+ * Diffuse egalement les mises a jour de presence (event {@code presence})
+ * a tous les utilisateurs connectes lors des connexions/deconnexions.
  */
 @Slf4j
 @Service
@@ -25,6 +29,7 @@ public class SseEmitterService {
     /**
      * Inscrit un utilisateur au flux SSE.
      * Si une connexion existe deja, elle est remplacee.
+     * Diffuse la presence mise a jour a tous les connectes.
      */
     public SseEmitter subscribe(Long userId) {
         SseEmitter existing = emitters.get(userId);
@@ -38,14 +43,17 @@ public class SseEmitterService {
         emitter.onCompletion(() -> {
             emitters.remove(userId);
             log.debug("SSE connection completed: userId={}", userId);
+            broadcastPresence();
         });
         emitter.onTimeout(() -> {
             emitters.remove(userId);
             log.debug("SSE connection timed out: userId={}", userId);
+            broadcastPresence();
         });
         emitter.onError(e -> {
             emitters.remove(userId);
             log.debug("SSE connection error: userId={}", userId);
+            broadcastPresence();
         });
 
         emitters.put(userId, emitter);
@@ -58,6 +66,7 @@ public class SseEmitterService {
         }
 
         log.info("SSE connection established: userId={}, activeConnections={}", userId, emitters.size());
+        broadcastPresence();
         return emitter;
     }
 
@@ -79,6 +88,13 @@ public class SseEmitterService {
     }
 
     /**
+     * Retourne les IDs des utilisateurs actuellement connectes au flux SSE.
+     */
+    public Set<Long> getConnectedUserIds() {
+        return Set.copyOf(emitters.keySet());
+    }
+
+    /**
      * Deconnecte un utilisateur du flux SSE.
      */
     public void disconnect(Long userId) {
@@ -86,5 +102,22 @@ public class SseEmitterService {
         if (emitter != null) {
             emitter.complete();
         }
+        broadcastPresence();
+    }
+
+    /**
+     * Diffuse la liste des IDs connectes a tous les emitters (fire-and-forget).
+     * Les emitters en erreur sont retires silencieusement.
+     */
+    private void broadcastPresence() {
+        Set<Long> connectedIds = Set.copyOf(emitters.keySet());
+        emitters.forEach((uid, emitter) -> {
+            try {
+                emitter.send(SseEmitter.event().name("presence").data(connectedIds));
+            } catch (IOException e) {
+                emitters.remove(uid);
+                log.debug("Failed to broadcast presence, removing emitter: userId={}", uid);
+            }
+        });
     }
 }

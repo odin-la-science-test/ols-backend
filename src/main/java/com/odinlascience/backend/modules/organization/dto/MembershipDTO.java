@@ -18,6 +18,7 @@ public class MembershipDTO {
     private Long userId;
     private String userEmail;
     private String userFullName;
+    private String userAvatarId;
     private OrganizationRole role;
     private MembershipStatus status;
     private Instant joinedAt;

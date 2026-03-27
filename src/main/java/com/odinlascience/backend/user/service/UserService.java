@@ -1,17 +1,24 @@
 package com.odinlascience.backend.user.service;
 
+import com.odinlascience.backend.email.EmailService;
 import com.odinlascience.backend.modules.common.spi.UserQuerySPI;
+import com.odinlascience.backend.user.dto.ChangePasswordRequest;
 import com.odinlascience.backend.user.dto.UserDTO;
+import com.odinlascience.backend.user.enums.AuthProvider;
 import com.odinlascience.backend.user.mapper.UserMapper;
 import com.odinlascience.backend.user.model.User;
 import com.odinlascience.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -20,6 +27,8 @@ public class UserService implements UserQuerySPI {
 
     private final UserRepository repository;
     private final UserMapper mapper;
+    private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     public List<UserDTO> getAllUsers() {
         return repository.findAll().stream()
@@ -69,6 +78,27 @@ public class UserService implements UserQuerySPI {
     public List<User> search(String query) {
         if (query == null || query.isBlank()) return List.of();
         return repository.search(query.trim());
+    }
+
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
+        User user = getCurrentUser()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifie"));
+
+        if (user.getAuthProvider() != AuthProvider.LOCAL) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Changement de mot de passe non disponible pour les comptes OAuth");
+        }
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Mot de passe actuel incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        repository.save(user);
+
+        emailService.sendHtmlEmail(user.getEmail(), "Mot de passe modifie",
+                "password-changed", Map.of("firstName", user.getFirstName()));
     }
 
     @Transactional

@@ -2,6 +2,8 @@ package com.odinlascience.backend.auth.controller;
 
 import com.odinlascience.backend.auth.dto.*;
 import com.odinlascience.backend.auth.service.AuthService;
+import com.odinlascience.backend.auth.service.EmailVerificationService;
+import com.odinlascience.backend.auth.service.PasswordResetService;
 import com.odinlascience.backend.auth.util.DeviceInfoExtractor;
 import com.odinlascience.backend.exception.dto.ErrorResponseDTO;
 import com.odinlascience.backend.security.service.JwtService;
@@ -28,6 +30,8 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
+    private final EmailVerificationService emailVerificationService;
     private final JwtService jwtService;
     private final UserRepository userRepository;
 
@@ -83,6 +87,34 @@ public class AuthController {
     public ResponseEntity<Void> revokeSessionPublic(@Valid @RequestBody RevokeSessionRequest request) {
         authService.revokeSessionWithCredentials(request.getEmail(), request.getPassword(), request.getSessionId());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Demander une reinitialisation de mot de passe", description = "Envoie un email avec un lien de reinitialisation. Retourne toujours 200 (anti-enumeration).")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordResetService.requestPasswordReset(request.getEmail());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reinitialiser le mot de passe", description = "Reinitialise le mot de passe avec un token valide. Revoque toutes les sessions.")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/verify-email")
+    @Operation(summary = "Verifier l'email", description = "Verifie l'adresse email via le token envoye par email")
+    public ResponseEntity<Void> verifyEmail(@RequestParam("token") String token) {
+        emailVerificationService.verifyEmail(token);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/resend-verification")
+    @Operation(summary = "Renvoyer l'email de verification", description = "Renvoie l'email de verification si l'adresse n'est pas encore verifiee")
+    public ResponseEntity<Void> resendVerification(Authentication auth) {
+        emailVerificationService.resendVerification(auth.getName());
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/guest")

@@ -41,6 +41,8 @@ public class SecurityConfig {
                 .requestMatchers(
                         "/api/auth/login", "/api/auth/register", "/api/auth/refresh",
                         "/api/auth/guest", "/api/auth/revoke-session",
+                        "/api/auth/forgot-password", "/api/auth/reset-password",
+                        "/api/auth/verify-email",
                         "/api/auth/oauth2/google", "/api/auth/oauth2/google/callback",
                         "/api/auth/cas/login", "/api/auth/cas/callback",
                         "/v3/api-docs/**", "/swagger-ui/**", "/api/quickshare/d/**"

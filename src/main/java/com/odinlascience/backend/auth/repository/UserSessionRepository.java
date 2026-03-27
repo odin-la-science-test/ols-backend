@@ -23,6 +23,10 @@ public interface UserSessionRepository extends JpaRepository<UserSession, UUID> 
     void deleteByUserIdAndIdNot(Long userId, UUID currentSessionId);
 
     @Modifying
+    @Query("DELETE FROM UserSession s WHERE s.user.id = :userId")
+    void deleteByUserId(Long userId);
+
+    @Modifying
     @Query("DELETE FROM UserSession s WHERE s.expiresAt < :now")
     int deleteExpiredSessions(Instant now);
 

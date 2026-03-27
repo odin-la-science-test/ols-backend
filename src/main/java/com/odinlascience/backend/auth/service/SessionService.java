@@ -80,6 +80,12 @@ public class SessionService {
     }
 
     @Transactional
+    public void revokeAllSessions(Long userId) {
+        sessionRepository.deleteByUserId(userId);
+        log.info("Toutes les sessions revoquees pour user={}", userId);
+    }
+
+    @Transactional
     public void updateLastActive(UUID sessionId) {
         sessionRepository.findById(sessionId).ifPresent(session -> {
             session.setLastActiveAt(Instant.now());

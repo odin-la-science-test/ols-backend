@@ -1,6 +1,6 @@
 package com.odinlascience.backend.modules.notes.service;
 
-import com.odinlascience.backend.exception.ResourceNotFoundException;
+import com.odinlascience.backend.modules.common.service.AbstractOwnedCrudService;
 import com.odinlascience.backend.modules.common.service.UserHelper;
 import com.odinlascience.backend.modules.notes.dto.CreateNoteRequest;
 import com.odinlascience.backend.modules.notes.dto.NoteDTO;
@@ -9,12 +9,13 @@ import com.odinlascience.backend.modules.notes.mapper.NoteMapper;
 import com.odinlascience.backend.modules.notes.model.Note;
 import com.odinlascience.backend.modules.notes.repository.NoteRepository;
 import com.odinlascience.backend.user.model.User;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -23,60 +24,33 @@ import java.util.List;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
-public class NoteService {
+public class NoteService extends AbstractOwnedCrudService<Note, NoteDTO, CreateNoteRequest, UpdateNoteRequest> {
 
     private final NoteRepository repository;
     private final NoteMapper mapper;
-    private final UserHelper userHelper;
 
-    // ─── Créer une note ───
+    public NoteService(UserHelper userHelper, NoteRepository repository, NoteMapper mapper) {
+        super(userHelper);
+        this.repository = repository;
+        this.mapper = mapper;
+    }
 
-    @Transactional
-    public NoteDTO create(CreateNoteRequest request, String userEmail) {
-        User owner = userHelper.findByEmail(userEmail);
+    // ─── Méthodes abstraites ───
 
-        Note note = Note.builder()
+    @Override
+    protected Note toEntity(CreateNoteRequest request, User owner) {
+        return Note.builder()
                 .title(request.getTitle())
                 .content(request.getContent())
                 .color(request.getColor())
                 .pinned(request.getPinned() != null ? request.getPinned() : false)
                 .tags(NoteMapper.tagsToString(request.getTags()))
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
                 .owner(owner)
                 .build();
-
-        Note saved = repository.save(note);
-        log.info("Note created: id={}, title='{}', owner={}", saved.getId(), saved.getTitle(), userEmail);
-        return mapper.toDTO(saved);
     }
 
-    // ─── Lister mes notes ───
-
-    @Transactional(readOnly = true)
-    public List<NoteDTO> getMyNotes(String userEmail) {
-        User owner = userHelper.findByEmail(userEmail);
-        return repository.findByOwnerIdOrderByPinnedDescUpdatedAtDesc(owner.getId())
-                .stream()
-                .map(mapper::toDTO)
-                .toList();
-    }
-
-    // ─── Détail d'une note par ID ───
-
-    @Transactional(readOnly = true)
-    public NoteDTO getById(Long id, String userEmail) {
-        Note note = findNoteOwnedBy(id, userEmail);
-        return mapper.toDTO(note);
-    }
-
-    // ─── Mettre à jour une note ───
-
-    @Transactional
-    public NoteDTO update(Long id, UpdateNoteRequest request, String userEmail) {
-        Note note = findNoteOwnedBy(id, userEmail);
-
+    @Override
+    protected void applyUpdate(Note note, UpdateNoteRequest request) {
         if (request.getTitle() != null) {
             note.setTitle(request.getTitle());
         }
@@ -92,43 +66,57 @@ public class NoteService {
         if (request.getTags() != null) {
             note.setTags(NoteMapper.tagsToString(request.getTags()));
         }
-
-        note.setUpdatedAt(Instant.now());
-        Note saved = repository.save(note);
-        log.info("Note updated: id={}, owner={}", saved.getId(), userEmail);
-        return mapper.toDTO(saved);
     }
 
-    // ─── Supprimer une note ───
+    @Override
+    protected NoteDTO toDTO(Note entity) {
+        return mapper.toDTO(entity);
+    }
 
-    @Transactional
-    public void delete(Long id, String userEmail) {
-        Note note = findNoteOwnedBy(id, userEmail);
-        repository.delete(note);
-        log.info("Note deleted: id={}, owner={}", id, userEmail);
+    @Override
+    public Class<NoteDTO> getDtoClass() {
+        return NoteDTO.class;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "Note";
+    }
+
+    @Override
+    protected JpaRepository<Note, Long> getRepository() {
+        return repository;
+    }
+
+    @Override
+    protected List<Note> findAllByOwner(User owner) {
+        return repository.findByOwnerIdAndDeletedAtIsNullOrderByPinnedDescUpdatedAtDesc(owner.getId());
+    }
+
+    @Override
+    protected List<Note> searchByOwner(String query, Long ownerId) {
+        return repository.searchByOwner(ownerId, query);
+    }
+
+    @Override
+    protected Page<Note> findAllByOwnerPaged(User owner, Pageable pageable) {
+        return repository.findByOwnerIdAndDeletedAtIsNullOrderByPinnedDescUpdatedAtDesc(owner.getId(), pageable);
+    }
+
+    @Override
+    protected Page<Note> searchByOwnerPaged(String query, Long ownerId, Pageable pageable) {
+        return repository.searchByOwnerPaged(ownerId, query, pageable);
     }
 
     // ─── Toggle pin ───
 
     @Transactional
     public NoteDTO togglePin(Long id, String userEmail) {
-        Note note = findNoteOwnedBy(id, userEmail);
+        Note note = findEntityOwnedBy(id, userEmail);
         note.setPinned(!note.getPinned());
-        note.setUpdatedAt(Instant.now());
         Note saved = repository.save(note);
         log.info("Note pin toggled: id={}, pinned={}, owner={}", saved.getId(), saved.getPinned(), userEmail);
         return mapper.toDTO(saved);
-    }
-
-    // ─── Recherche ───
-
-    @Transactional(readOnly = true)
-    public List<NoteDTO> search(String query, String userEmail) {
-        User owner = userHelper.findByEmail(userEmail);
-        return repository.searchByOwner(owner.getId(), query)
-                .stream()
-                .map(mapper::toDTO)
-                .toList();
     }
 
     // ─── Recherche par tag ───
@@ -140,13 +128,5 @@ public class NoteService {
                 .stream()
                 .map(mapper::toDTO)
                 .toList();
-    }
-
-    // ─── Helpers ───
-
-    private Note findNoteOwnedBy(Long noteId, String userEmail) {
-        Note note = repository.findById(noteId)
-                .orElseThrow(() -> new ResourceNotFoundException("Note introuvable avec l'ID : " + noteId));
-        return userHelper.verifyOwnership(note, userEmail, "Note", noteId);
     }
 }

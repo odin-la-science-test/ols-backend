@@ -8,10 +8,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Service abstrait générique pour la gestion d'entités identifiables.
- * Fournit les opérations CRUD standard et l'identification par critères multiples.
+ * Service abstrait generique pour la gestion d'entites identifiables.
+ * Fournit les operations CRUD standard et l'identification par criteres multiples.
+ * Le cache est gere par les sous-classes via @Cacheable avec leurs noms de cache.
  *
- * @param <E> Le type de l'entité
+ * @param <E> Le type de l'entite
  * @param <D> Le type du DTO
  * @param <R> Le type du repository
  */
@@ -23,28 +24,16 @@ public abstract class AbstractIdentificationService<E, D, R extends JpaRepositor
         this.repository = repository;
     }
 
-    /**
-     * Convertit une entité en DTO.
-     */
     protected abstract D toDTO(E entity);
 
-    /**
-     * Convertit une entité avec son score en DTO.
-     */
     protected abstract D toDTO(E entity, Integer score);
 
-    /**
-     * Retourne le nom de l'entité pour les messages d'erreur.
-     */
     protected abstract String getEntityName();
 
-    /**
-     * Trouve les meilleures correspondances selon les critères fournis.
-     */
     protected abstract List<IdentifiableMatch<E>> findBestMatches(D criteria, int limit);
 
     /**
-     * Récupère toutes les entités.
+     * Recupere toutes les entites. Les sous-classes overrident avec @Cacheable.
      */
     public List<D> getAll() {
         return repository.findAll().stream()
@@ -53,9 +42,7 @@ public abstract class AbstractIdentificationService<E, D, R extends JpaRepositor
     }
 
     /**
-     * Récupère une entité par son ID.
-     *
-     * @throws ResourceNotFoundException si l'entité n'existe pas
+     * Recupere une entite par son ID. Les sous-classes overrident avec @Cacheable.
      */
     public D getById(Long id) {
         E entity = repository.findById(id)
@@ -65,9 +52,7 @@ public abstract class AbstractIdentificationService<E, D, R extends JpaRepositor
     }
 
     /**
-     * Récupère une entité par son code API.
-     *
-     * @throws ResourceNotFoundException si l'entité n'existe pas
+     * Recupere une entite par son code API.
      */
     public D getByApiCode(String apiCode) {
         Optional<E> entityOpt = findByApiCode(apiCode);
@@ -77,7 +62,7 @@ public abstract class AbstractIdentificationService<E, D, R extends JpaRepositor
     }
 
     /**
-     * Recherche des entités par nom d'espèce.
+     * Recherche des entites par nom d'espece.
      */
     public List<D> searchBySpecies(String query) {
         List<E> entities = findBySpeciesContaining(query);
@@ -88,6 +73,7 @@ public abstract class AbstractIdentificationService<E, D, R extends JpaRepositor
 
     /**
      * Identifie les entités correspondant le mieux aux critères fournis.
+     * Non mise en cache car les criteres varient fortement.
      */
     public List<D> identifyByCriteria(D criteria) {
         List<IdentifiableMatch<E>> matches = findBestMatches(criteria, 20);

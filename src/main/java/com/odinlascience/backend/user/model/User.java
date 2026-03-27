@@ -37,6 +37,9 @@ public class User {
 
     private String externalId;
 
+    @Builder.Default
+    private boolean emailVerified = false;
+
     /** Retourne le nom complet (prénom + nom), trimé. */
     public String getFullName() {
         String first = firstName != null ? firstName : "";

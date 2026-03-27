@@ -13,8 +13,10 @@ public class SupervisionMapper {
                 .organizationId(entity.getOrganization().getId())
                 .supervisorId(entity.getSupervisor().getId())
                 .supervisorName(entity.getSupervisor().getFullName())
+                .supervisorAvatarId(entity.getSupervisor().getAvatarId())
                 .superviseeId(entity.getSupervisee().getId())
                 .superviseeName(entity.getSupervisee().getFullName())
+                .superviseeAvatarId(entity.getSupervisee().getAvatarId())
                 .createdAt(entity.getCreatedAt())
                 .build();
     }
