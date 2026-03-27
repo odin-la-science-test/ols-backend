@@ -1,5 +1,14 @@
-# OLS Backend
+---
+title: Odin La Science
+emoji: 🔬
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
 
+# OLS Backend
 API REST pour la plateforme **Odin La Science**.
 
 ## Stack
