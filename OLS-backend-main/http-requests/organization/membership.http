@@ -1,0 +1,48 @@
+### Variables
+@baseUrl = http://localhost:8080/api/organizations/1/members
+@token = Bearer {{$dotenv JWT_TOKEN}}
+
+### Ajouter un membre (invite)
+POST {{baseUrl}}
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "email": "jean.dupont@example.com",
+  "role": "MEMBER"
+}
+
+### Ajouter un stagiaire
+POST {{baseUrl}}
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "email": "julie.martin@example.com",
+  "role": "INTERN"
+}
+
+### Lister les membres
+GET {{baseUrl}}
+Authorization: {{token}}
+
+### Changer le role d'un membre
+PUT {{baseUrl}}/2/role
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "role": "MANAGER"
+}
+
+### Accepter une invitation
+POST {{baseUrl}}/accept
+Authorization: {{token}}
+
+### Retirer un membre
+DELETE {{baseUrl}}/2
+Authorization: {{token}}
+
+### Quitter l'organisation
+DELETE {{baseUrl}}/leave
+Authorization: {{token}}

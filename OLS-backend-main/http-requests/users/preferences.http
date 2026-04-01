@@ -1,0 +1,54 @@
+### User Preferences - Endpoints tests
+@host = http://localhost:8080
+@auth = {{host}}/api/auth
+@users = {{host}}/api/users
+
+### ===========================================================================
+### Utilisateurs pre-crees dans data.sql (mot de passe: 1234)
+### ===========================================================================
+
+### 0) Login Admin - Capture du token
+# @name loginAdmin
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "1234"
+}
+
+### 1) Recuperer les preferences (devrait etre 204 au premier appel)
+GET {{users}}/me/preferences
+Accept: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### 2) Sauvegarder des preferences
+PUT {{users}}/me/preferences
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+{
+  "preferencesJson": "{\"theme\":{\"theme\":\"dark\",\"themePreset\":\"odin-dark\",\"density\":\"normal\",\"fontSize\":14},\"language\":{\"language\":\"fr\"},\"keybindings\":{\"bindings\":[]},\"dashboard\":{\"widgets\":[],\"customShortcuts\":[],\"widgetSettings\":{}},\"profiles\":{\"profiles\":[],\"activeProfileId\":null}}",
+  "lastModified": "2026-03-25T10:00:00Z",
+  "version": 1
+}
+
+### 3) Recuperer les preferences apres sauvegarde
+GET {{users}}/me/preferences
+Accept: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+### 4) Tester le conflit (timestamp ancien)
+PUT {{users}}/me/preferences
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.accessToken}}
+
+{
+  "preferencesJson": "{\"theme\":{\"theme\":\"light\"}}",
+  "lastModified": "2026-03-24T10:00:00Z",
+  "version": 1
+}
+
+### 5) Tester sans auth (doit renvoyer 401)
+GET {{users}}/me/preferences
+Accept: application/json

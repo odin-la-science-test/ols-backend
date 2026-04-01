@@ -1,0 +1,97 @@
+@host = http://localhost:8080
+@auth = {{host}}/api/auth
+
+### ===========================================================================
+### AUTHENTIFICATION - Tests
+### Utilisateurs pré-créés dans data.sql (mot de passe: 1234)
+### ===========================================================================
+
+### 1) Login Admin - Retourne accessToken + refreshToken
+# @name loginAdmin
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "1234"
+}
+
+### 2) Login Student
+# @name loginStudent
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "student@example.com",
+  "password": "1234"
+}
+
+### 3) Login Professional
+# @name loginPro
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "pro@example.com",
+  "password": "1234"
+}
+
+### 4) Login Guest (via login classique - LEGACY)
+# @name loginGuestLegacy
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "guest@example.com",
+  "password": "1234"
+}
+
+### 5) Login Guest (endpoint dédié - token anonyme, pas de compte en DB)
+# @name loginGuest
+POST {{auth}}/guest
+# Retourne un token avec role GUEST, pas de refreshToken
+# Chaque appel génère un nouvel ID guest unique
+
+### 6) Login - utilisateur inexistant (doit renvoyer 401)
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "inexistant@example.com",
+  "password": "password"
+}
+
+### ===========================================================================
+### REFRESH TOKEN - Tests
+### ===========================================================================
+
+### 6) Refresh Token - Obtenir un nouveau access token
+POST {{auth}}/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{loginAdmin.response.body.refreshToken}}"
+}
+
+### 7) Refresh Token - Token invalide (doit renvoyer 401)
+POST {{auth}}/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "invalid_token_here"
+}
+
+### ===========================================================================
+### REGISTER - Tests
+### ===========================================================================
+
+### 8) Register - Créer un nouvel utilisateur
+POST {{auth}}/register
+Content-Type: application/json
+
+{
+  "email": "newuser@example.com",
+  "password": "12345678",
+  "firstName": "New",
+  "lastName": "User"
+}

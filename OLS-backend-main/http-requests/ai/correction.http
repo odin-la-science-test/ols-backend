@@ -1,0 +1,49 @@
+### ═══════════════════════════════════════════════════════════════════════
+### AI - Correction de texte (LanguageTool)
+### ═══════════════════════════════════════════════════════════════════════
+
+### Configuration (Dev)
+@host = http://localhost:8080
+@auth = {{host}}/api/auth
+@api = {{host}}/api/ai
+
+### ─── Login ───
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "admin"
+}
+
+> {% client.global.set("token", response.body.accessToken); %}
+
+### ─── Corriger un texte (francais) ───
+POST {{api}}/correct
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "text": "je sui allee a la mer hier et jai manger du poisson",
+  "language": "fr"
+}
+
+### ─── Corriger un texte (anglais) ───
+POST {{api}}/correct
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "text": "I has went to the store yestarday and buyed some apples",
+  "language": "en-US"
+}
+
+### ─── Texte sans faute ───
+POST {{api}}/correct
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "text": "Bonjour, comment allez-vous aujourd'hui ?",
+  "language": "fr"
+}

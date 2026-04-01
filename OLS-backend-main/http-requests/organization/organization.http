@@ -1,0 +1,41 @@
+### Variables
+@baseUrl = http://localhost:8080/api/organizations
+@token = Bearer {{$dotenv JWT_TOKEN}}
+
+### Creer une organisation
+POST {{baseUrl}}
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "name": "Laboratoire Pasteur",
+  "description": "Laboratoire de recherche en microbiologie",
+  "type": "LABORATORY",
+  "website": "https://pasteur.fr"
+}
+
+### Lister mes organisations
+GET {{baseUrl}}
+Authorization: {{token}}
+
+### Detail d'une organisation
+GET {{baseUrl}}/1
+Authorization: {{token}}
+
+### Modifier une organisation
+PUT {{baseUrl}}/1
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "name": "Laboratoire Pasteur - Paris",
+  "description": "Laboratoire de recherche en microbiologie et virologie"
+}
+
+### Rechercher des organisations
+GET {{baseUrl}}/search?query=pasteur
+Authorization: {{token}}
+
+### Supprimer une organisation
+DELETE {{baseUrl}}/1
+Authorization: {{token}}

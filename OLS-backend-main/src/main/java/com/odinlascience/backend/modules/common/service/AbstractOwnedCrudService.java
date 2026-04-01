@@ -1,0 +1,216 @@
+package com.odinlascience.backend.modules.common.service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.odinlascience.backend.exception.ResourceNotFoundException;
+import com.odinlascience.backend.modules.common.event.CrudActionEvent;
+import com.odinlascience.backend.modules.common.model.OwnedEntity;
+import com.odinlascience.backend.modules.common.model.SoftDeletable;
+import com.odinlascience.backend.user.model.User;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.transaction.annotation.Transactional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.time.Instant;
+import java.util.List;
+
+/**
+ * Service abstrait generique pour les entites owned (CRUD complet avec verification d'ownership).
+ * Les sous-classes ajoutent @Service et implementent les methodes abstraites.
+ *
+ * @param <E> Le type de l'entite (doit implementer OwnedEntity)
+ * @param <D> Le type du DTO de reponse
+ * @param <C> Le type de la requete de creation
+ * @param <U> Le type de la requete de mise a jour
+ */
+@Slf4j
+public abstract class AbstractOwnedCrudService<E extends OwnedEntity, D, C, U> {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
+
+    protected final UserHelper userHelper;
+    protected final ApplicationEventPublisher eventPublisher;
+
+    protected AbstractOwnedCrudService(UserHelper userHelper, ApplicationEventPublisher eventPublisher) {
+        this.userHelper = userHelper;
+        this.eventPublisher = eventPublisher;
+    }
+
+    // --- Methodes abstraites ---
+
+    /** Construit une entite a partir de la requete de creation et du proprietaire. */
+    protected abstract E toEntity(C request, User owner);
+
+    /** Applique les champs de mise a jour partielle sur l'entite existante. */
+    protected abstract void applyUpdate(E entity, U request);
+
+    /** Convertit une entite en DTO de reponse. */
+    protected abstract D toDTO(E entity);
+
+    /** Retourne le nom de l'entite pour les messages de log et d'erreur. */
+    protected abstract String getEntityName();
+
+    /** Retourne le repository JPA de l'entite. */
+    protected abstract JpaRepository<E, Long> getRepository();
+
+    /** Retourne toutes les entites du proprietaire (avec tri). */
+    protected abstract List<E> findAllByOwner(User owner);
+
+    /** Recherche les entites du proprietaire correspondant a la requete. */
+    protected abstract List<E> searchByOwner(String query, Long ownerId);
+
+    /** Retourne toutes les entites du proprietaire avec pagination. */
+    protected abstract Page<E> findAllByOwnerPaged(User owner, Pageable pageable);
+
+    /** Recherche les entites du proprietaire avec pagination. */
+    protected abstract Page<E> searchByOwnerPaged(String query, Long ownerId, Pageable pageable);
+
+    /** Retourne la classe du DTO de reponse (pour l'export). */
+    public abstract Class<D> getDtoClass();
+
+    /** Retourne le slug du module pour l'API et l'historique (ex: "notes", "contacts"). */
+    protected abstract String getModuleSlug();
+
+    // --- CRUD ---
+
+    @Transactional
+    public D create(C request, String userEmail) {
+        User owner = userHelper.findByEmail(userEmail);
+        E entity = toEntity(request, owner);
+        E saved = getRepository().save(entity);
+        log.info("{} created: owner={}", getEntityName(), userEmail);
+        D dto = toDTO(saved);
+        publishAction("CREATE", saved.getId(), null, toJson(dto), "create", "plus", userEmail);
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public List<D> getMyItems(String userEmail) {
+        User owner = userHelper.findByEmail(userEmail);
+        return findAllByOwner(owner).stream().map(this::toDTO).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public D getById(Long id, String userEmail) {
+        E entity = findEntityOwnedBy(id, userEmail);
+        return toDTO(entity);
+    }
+
+    @Transactional
+    public D update(Long id, U request, String userEmail) {
+        E entity = findEntityOwnedBy(id, userEmail);
+        String previousJson = toJson(toDTO(entity));
+        applyUpdate(entity, request);
+        E saved = getRepository().save(entity);
+        log.info("{} updated: id={}, owner={}", getEntityName(), id, userEmail);
+        D dto = toDTO(saved);
+        publishAction("UPDATE", id, previousJson, toJson(dto), "update", "pencil", userEmail);
+        return dto;
+    }
+
+    @Transactional
+    public void delete(Long id, String userEmail) {
+        E entity = findEntityOwnedBy(id, userEmail);
+        if (entity instanceof SoftDeletable softDeletable) {
+            if (softDeletable.getDeletedAt() != null) {
+                // Idempotent : deja supprime
+                return;
+            }
+            String previousJson = toJson(toDTO(entity));
+            softDeletable.setDeletedAt(Instant.now());
+            getRepository().save(entity);
+            log.info("{} soft-deleted: id={}, owner={}", getEntityName(), id, userEmail);
+            publishAction("DELETE", id, previousJson, null, "delete", "trash-2", userEmail);
+        } else {
+            String previousJson = toJson(toDTO(entity));
+            getRepository().delete(entity);
+            log.info("{} deleted: id={}, owner={}", getEntityName(), id, userEmail);
+            publishAction("DELETE", id, previousJson, null, "delete", "trash-2", userEmail);
+        }
+    }
+
+    @Transactional
+    public D restore(Long id, String userEmail) {
+        E entity = findEntityOwnedBy(id, userEmail);
+        if (entity instanceof SoftDeletable softDeletable) {
+            if (softDeletable.getDeletedAt() == null) {
+                // Idempotent : deja actif, retourner tel quel
+                return toDTO(entity);
+            }
+            softDeletable.setDeletedAt(null);
+            E saved = getRepository().save(entity);
+            log.info("{} restored: id={}, owner={}", getEntityName(), id, userEmail);
+            return toDTO(saved);
+        }
+        throw new IllegalArgumentException(getEntityName() + " ne supporte pas la restauration");
+    }
+
+    @Transactional(readOnly = true)
+    public List<D> search(String query, String userEmail) {
+        User owner = userHelper.findByEmail(userEmail);
+        return searchByOwner(query, owner.getId()).stream().map(this::toDTO).toList();
+    }
+
+    // --- Batch ---
+
+    @Transactional
+    public void deleteBatch(List<Long> ids, String userEmail) {
+        ids.forEach(id -> delete(id, userEmail));
+        log.info("{} batch deleted: count={}, owner={}", getEntityName(), ids.size(), userEmail);
+    }
+
+    // --- Pagination ---
+
+    @Transactional(readOnly = true)
+    public Page<D> getMyItemsPaged(String userEmail, Pageable pageable) {
+        User owner = userHelper.findByEmail(userEmail);
+        return findAllByOwnerPaged(owner, pageable).map(this::toDTO);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<D> searchPaged(String query, String userEmail, Pageable pageable) {
+        User owner = userHelper.findByEmail(userEmail);
+        return searchByOwnerPaged(query, owner.getId(), pageable).map(this::toDTO);
+    }
+
+    // --- Helper ---
+
+    /**
+     * Trouve une entite par ID et verifie qu'elle appartient a l'utilisateur.
+     * Accessible aux sous-classes pour des operations custom (toggle favori, etc.).
+     */
+    protected E findEntityOwnedBy(Long id, String userEmail) {
+        E entity = getRepository().findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        getEntityName() + " introuvable avec l'ID : " + id));
+        return userHelper.verifyOwnership(entity, userEmail, getEntityName(), id);
+    }
+
+    // --- History helpers ---
+
+    /**
+     * Publie un CrudActionEvent pour l'enregistrement automatique dans l'historique.
+     * Utilisable par les sous-classes pour les operations custom (toggle, etc.).
+     */
+    protected void publishAction(String actionType, Long entityId, String previousJson,
+                                 String newJson, String labelKeySuffix, String icon, String userEmail) {
+        eventPublisher.publishEvent(new CrudActionEvent(
+                getModuleSlug(), actionType, entityId, previousJson, newJson,
+                userEmail, labelKeySuffix, icon
+        ));
+    }
+
+    /** Serialise un DTO en JSON pour le stockage dans l'historique. */
+    protected String toJson(Object dto) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(dto);
+        } catch (JsonProcessingException e) {
+            log.warn("Cannot serialize DTO to JSON for history", e);
+            return null;
+        }
+    }
+}

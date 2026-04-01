@@ -1,0 +1,108 @@
+### Configuration (Dev)
+@host = http://localhost:8080
+@auth = {{host}}/api/auth
+
+@api = {{host}}/api/fungi
+
+### 0) Login - Capture du token
+# @name loginRequest 
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "1234" 
+}
+
+### ===========================================================================
+### MYCOLOGIE : Endpoints pour les champignons
+### ===========================================================================
+
+### 1. Récupérer tout le catalogue de champignons
+GET {{api}}
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.accessToken}}
+
+### 2. Récupérer un champignon par ID (ex: Saccharomyces cerevisiae)
+GET {{api}}/1
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.accessToken}}
+
+### 3. Récupérer un champignon par ID inexistant (doit retourner 404)
+GET {{api}}/99999
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.accessToken}}
+
+### 4. Recherche par espèce (query param)
+GET {{api}}/search?query=Candida
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+### 5. Recherche sans paramètre (doit retourner 400 Bad Request)
+GET {{api}}/search
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+### 6. Identifier via code API (ex: SAC001 -> Saccharomyces cerevisiae)
+GET {{api}}/identify/api/SAC001
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+### 7. Identifier via code API inexistant (doit retourner 404)
+GET {{api}}/identify/api/UNKNOWN000
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+### 8. Identifier par profil mycologique (Type = LEVURES)
+POST {{api}}/identify
+Content-Type: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+{
+  "type": "LEVURES"
+}
+
+### 9. Identifier par profil mycologique (Type = MOISISSURES, Aérobie = true)
+POST {{api}}/identify
+Content-Type: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+{
+  "type": "MOISISSURES",
+  "aerobic": true
+}
+
+### 10. Identifier par profil mycologique (Catégorie = PATHOGENES, Encapsulé = true)
+POST {{api}}/identify
+Content-Type: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+{
+  "category": "PATHOGENES",
+  "encapsulated": true
+}
+
+### 11. Identifier par profil mycologique (Mélanoïde = true, Dimorphe = true)
+POST {{api}}/identify
+Content-Type: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+{
+  "melaninProducer": true,
+  "dimorphic": true
+}
+
+### 12. Identifier par profil mycologique (Type = CHAMPIGNONS_FILAMENTEUX, Catégorie = MEDICINAUX)
+POST {{api}}/identify
+Content-Type: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}
+
+{
+  "type": "CHAMPIGNONS_FILAMENTEUX",
+  "category": "MEDICINAUX"
+}
+
+### 13. Recherche complexe (recherche par espèce avec wildcard)
+GET {{api}}/search?query=Penicillium
+Accept: application/json
+Authorization: Bearer {{loginRequest.response.body.token}}

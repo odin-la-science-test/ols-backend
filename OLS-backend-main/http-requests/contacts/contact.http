@@ -1,0 +1,61 @@
+### Configuration (Dev)
+@host = http://localhost:8080
+@auth = {{host}}/api/auth
+@api = {{host}}/api/contacts
+
+### ─── Login Admin ───
+POST {{auth}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "1234"
+}
+
+> {% client.global.set("token", response.body.accessToken); %}
+
+### ─── Créer un contact ───
+POST {{api}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "firstName": "Marie",
+  "lastName": "Curie",
+  "email": "marie.curie@labo.fr",
+  "phone": "+33 6 12 34 56 78",
+  "organization": "Institut Pasteur",
+  "jobTitle": "Chercheuse",
+  "notes": "Spécialiste en radioactivité",
+  "favorite": true
+}
+
+### ─── Lister mes contacts ───
+GET {{api}}
+Authorization: Bearer {{token}}
+
+### ─── Détail d'un contact (id=1) ───
+GET {{api}}/1
+Authorization: Bearer {{token}}
+
+### ─── Mettre à jour un contact (id=1) ───
+PUT {{api}}/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "phone": "+33 6 99 88 77 66",
+  "organization": "CNRS"
+}
+
+### ─── Toggle favori (id=1) ───
+PATCH {{api}}/1/favorite
+Authorization: Bearer {{token}}
+
+### ─── Rechercher ───
+GET {{api}}/search?q=curie
+Authorization: Bearer {{token}}
+
+### ─── Supprimer un contact (id=1) ───
+DELETE {{api}}/1
+Authorization: Bearer {{token}}
